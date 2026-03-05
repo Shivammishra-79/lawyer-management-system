@@ -8,6 +8,11 @@ import { FaUser, FaPhoneAlt, FaCalendarAlt, FaClock, FaGavel, FaCheckCircle, FaF
 import AOS from "aos";
 import "aos/dist/aos.css";
 
+// --- AUTOMATIC URL LOGIC ---
+const BASE_URL = window.location.hostname === "localhost" 
+  ? "http://127.0.0.1:8000" 
+  : "https://lawyer-management-system-8fwo.onrender.com";
+
 export default function Appointment() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -20,10 +25,10 @@ export default function Appointment() {
     AOS.init({ duration: 1000, once: true });
   }, []);
 
-  // --- FETCH LOGIC (NO CHANGES) ---
+  // --- FETCH LOGIC UPDATED WITH BASE_URL ---
   const fetchBooked = async (d) => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/appointments");
+      const res = await axios.get(`${BASE_URL}/appointments`);
       const sameDay = res.data.filter(a => a.date === d);
       const times = sameDay.map(a => {
         const [t, ampm] = a.time.split(" ");
@@ -38,19 +43,17 @@ export default function Appointment() {
     } catch (err) { console.error("Error fetching slots", err); }
   };
 
-  // --- KHATARNAK PDF SLIP DESIGN ---
+  // --- KHATARNAK PDF SLIP DESIGN (Unchanged) ---
   const downloadSlip = () => {
     const doc = new jsPDF();
     const goldColor = [202, 138, 4]; // #ca8a04
     
-    // Borders
     doc.setDrawColor(202, 138, 4);
     doc.setLineWidth(1.5);
     doc.rect(5, 5, 200, 287);
     doc.setLineWidth(0.5);
     doc.rect(7, 7, 196, 283);
 
-    // Header Header
     doc.setFillColor(5, 5, 5);
     doc.rect(7, 7, 196, 45, "F");
 
@@ -69,11 +72,9 @@ export default function Appointment() {
     doc.setLineWidth(0.5);
     doc.line(55, 36, 190, 36);
 
-    // Body
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(16);
     doc.text("OFFICIAL CONSULTATION SLIP", 105, 70, { align: "center" });
-    
     
     doc.setFontSize(9); doc.setTextColor(100);
 
@@ -103,14 +104,14 @@ export default function Appointment() {
     doc.save(`Appointment_${name.replace(/\s+/g, '_')}.pdf`);
   };
 
-  // --- BOOK LOGIC (NO CHANGES) ---
+  // --- BOOK LOGIC UPDATED WITH BASE_URL ---
   const book = async () => {
     if (!name || !phone || !date || !time) { alert("Fill all fields"); return; }
     if (phone.length !== 10 || !/^\d+$/.test(phone)) { alert("Phone must be 10 digits"); return; }
     const fd = new FormData();
     fd.append("name", name); fd.append("phone", phone); fd.append("date", date); fd.append("time", time);
     try {
-      const res = await axios.post("http://127.0.0.1:8000/book", fd);
+      const res = await axios.post(`${BASE_URL}/book`, fd);
       if (res.data.status === "fail") { alert(res.data.message || "Slot already booked"); return; }
       alert("Booked Successfully ✅");
       downloadSlip();
@@ -118,6 +119,7 @@ export default function Appointment() {
     } catch (err) { alert(err.response?.data?.detail || "Booking Failed"); }
   };
 
+  // ... (Baaki saara UI aur helpers logic same rahega)
   const isPastTime = (slotTime) => {
     if (!date) return false;
     const now = new Date();
@@ -201,7 +203,6 @@ export default function Appointment() {
                 </div>
               </div>
 
-              {/* Responsive Calendar Wrapper */}
               <div className="premium-datepicker bg-black/40 p-4 rounded-[30px] border border-white/5 flex justify-center">
                 <DatePicker
                   selected={selectedDate}
@@ -249,7 +250,6 @@ export default function Appointment() {
                 })}
               </div>
 
-              {/* Status Indicator */}
               <div className="mt-8 space-y-4">
                 <div className={`p-5 rounded-3xl border flex items-center justify-between transition-all ${date && time ? 'bg-yellow-600/10 border-yellow-600/40' : 'bg-white/5 border-white/5 opacity-30'}`}>
                   <div>

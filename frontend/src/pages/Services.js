@@ -8,16 +8,22 @@ import lawyerImg from "../assets/Profile.png";
 export default function Services() {
   const [services, setServices] = useState([]);
 
-  // Logic unchanged - Backend connection intact
+  // --- DYNAMIC API SELECTION ---
+  const API_BASE_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://127.0.0.1:8000" 
+    : "https://lawyer-management-system-8fwo.onrender.com";
+
   useEffect(() => {
     AOS.init({ duration: 1200, once: true });
-    axios.get("http://127.0.0.1:8000/services")
+    
+    // Dynamic URL ka use karke fetching
+    axios.get(`${API_BASE_URL}/services`)
       .then(r => setServices(r.data))
       .catch(err => {
-        console.error(err);
+        console.error("Services Fetch Error:", err);
         setServices([]); 
       });
-  }, []);
+  }, [API_BASE_URL]); // Dependency array mein URL add kiya hai best practice ke liye
 
   return (
     <div className="min-h-screen bg-[#050505] text-white px-4 md:px-16 py-12 md:py-24 relative overflow-hidden">
@@ -26,7 +32,7 @@ export default function Services() {
       <div className="absolute top-[-10%] left-[-10%] w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-yellow-600/5 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[250px] md:w-[500px] h-[250px] md:h-[500px] bg-yellow-900/5 blur-[100px] rounded-full pointer-events-none"></div>
 
-      {/* --- HEADER (Clean & Professional) --- */}
+      {/* --- HEADER --- */}
       <div className="max-w-7xl mx-auto text-center mb-16 md:mb-28 relative z-10">
         <h2 
           className="text-yellow-600 font-black uppercase text-[10px] md:text-xs tracking-[0.5em] mb-4"
@@ -43,21 +49,19 @@ export default function Services() {
         <div className="h-1 w-20 md:w-32 bg-yellow-600 mx-auto mt-8 shadow-[0_0_15px_rgba(202,138,4,0.5)]"></div>
       </div>
 
-      {/* --- SERVICES GRID (Fully Responsive) --- */}
+      {/* --- SERVICES GRID --- */}
       <div className="max-w-7xl mx-auto relative z-10">
         {services.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-12">
             {services.map((s, i) => (
               <div
-                key={s.id}
+                key={s.id || i}
                 className="group relative bg-[#0a0a0a] p-8 md:p-12 rounded-[40px] border border-white/5 overflow-hidden transition-all duration-700 hover:border-yellow-600/40 hover:-translate-y-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
                 data-aos="fade-up"
                 data-aos-delay={i * 100}
               >
-                {/* Visual Accent */}
                 <div className="absolute top-0 left-0 w-2 h-0 bg-yellow-600 group-hover:h-full transition-all duration-500"></div>
 
-                {/* Hover Lawyer Backdrop (Retained) */}
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-[0.15] transition-opacity duration-1000 pointer-events-none">
                   <img
                     src={lawyerImg}
@@ -66,7 +70,6 @@ export default function Services() {
                   />
                 </div>
 
-                {/* Card Content */}
                 <div className="relative z-10">
                   <div className="mb-10 w-14 h-14 rounded-2xl border border-yellow-600/20 flex items-center justify-center bg-white/[0.03] text-yellow-500 group-hover:bg-yellow-600 group-hover:text-black transition-all duration-500 shadow-xl">
                     <span className="text-2xl">⚖️</span>
@@ -89,7 +92,7 @@ export default function Services() {
             ))}
           </div>
         ) : (
-          /* Empty State */
+          /* Empty/Loading State */
           <div className="text-center py-24 md:py-40 bg-white/[0.01] border border-white/5 rounded-[50px]">
             <p className="text-gray-600 text-sm md:text-xl uppercase tracking-[0.5em] font-black italic">
               Loading Jurisdictions...

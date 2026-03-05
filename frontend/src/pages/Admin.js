@@ -10,6 +10,11 @@ import {
   FaSearch, FaDownload, FaFilter, FaChevronDown, FaChevronUp 
 } from "react-icons/fa";
 
+// --- AUTOMATIC URL LOGIC ---
+const BASE_URL = window.location.hostname === "localhost" 
+  ? "http://127.0.0.1:8000" 
+  : "https://lawyer-management-system-8fwo.onrender.com";
+
 export default function Admin() {
   const nav = useNavigate();
   
@@ -18,7 +23,6 @@ export default function Admin() {
   const [services, setServices] = useState([]);
   const [apps, setApps] = useState([]);
   
-  // UI Expand States
   const [isIncomeOpen, setIsIncomeOpen] = useState(false);
   const [isExpenseOpen, setIsExpenseOpen] = useState(false);
 
@@ -51,8 +55,8 @@ export default function Admin() {
   const [exDate, setExDate] = useState(new Date().toISOString().split('T')[0]);
 
   const loadIncome = () => {
-    const getDirectIncome = axios.get("http://127.0.0.1:8000/get-income");
-    const getAppointments = axios.get("http://127.0.0.1:8000/appointments");
+    const getDirectIncome = axios.get(`${BASE_URL}/get-income`);
+    const getAppointments = axios.get(`${BASE_URL}/appointments`);
 
     Promise.all([getDirectIncome, getAppointments])
       .then(([resIncome, resAppts]) => {
@@ -90,14 +94,14 @@ export default function Admin() {
   }, []);
 
   const load = () => {
-    axios.get("http://127.0.0.1:8000/blogs").then(r => setBlogs(r.data));
-    axios.get("http://127.0.0.1:8000/services").then(r => setServices(r.data));
-    axios.get("http://127.0.0.1:8000/appointments").then(r => setApps(r.data));
+    axios.get(`${BASE_URL}/blogs`).then(r => setBlogs(r.data));
+    axios.get(`${BASE_URL}/services`).then(r => setServices(r.data));
+    axios.get(`${BASE_URL}/appointments`).then(r => setApps(r.data));
   };
 
   const loadFinance = () => {
-    axios.get("http://127.0.0.1:8000/finance-summary").then(r => setFinSummary(r.data));
-    axios.get("http://127.0.0.1:8000/expenses").then(r => setExpenses(r.data));
+    axios.get(`${BASE_URL}/finance-summary`).then(r => setFinSummary(r.data));
+    axios.get(`${BASE_URL}/expenses`).then(r => setExpenses(r.data));
   };
 
   const filteredApps = useMemo(() => {
@@ -117,7 +121,7 @@ export default function Admin() {
       fd.append("reason", exReason);
       fd.append("amount", exAmount);
       fd.append("date", exDate);
-      axios.post("http://127.0.0.1:8000/add-expense", fd)
+      axios.post(`${BASE_URL}/add-expense`, fd)
         .then(() => {
           alert("Expense Added! ✅");
           setExReason(""); setExAmount("");
@@ -129,7 +133,7 @@ export default function Admin() {
 
   const delExpense = (id) => {
     if (window.confirm("Do you want to delete this expense?")) {
-      axios.delete(`http://127.0.0.1:8000/delete-expense/${id}`).then(() => {
+      axios.delete(`${BASE_URL}/delete-expense/${id}`).then(() => {
         alert("Expense Deleted! 🗑️");
         loadFinance();
       }).catch(err => alert("Error deleting expense ❌"));
@@ -143,7 +147,7 @@ export default function Admin() {
     fd.append("mobile", clMobile);
     fd.append("amount", clAmount);
     fd.append("date", clDate);
-    axios.post("http://127.0.0.1:8000/add-income", fd).then(() => {
+    axios.post(`${BASE_URL}/add-income`, fd).then(() => {
       alert("Payment Recorded! ✅");
       setClName(""); setClMobile(""); setClAmount("");
       setClDate(new Date().toISOString().split('T')[0]);
@@ -153,7 +157,7 @@ export default function Admin() {
 
   const delIncome = (id) => {
     if (window.confirm("Delete this income record?")) {
-      axios.delete(`http://127.0.0.1:8000/delete-income/${id}`).then(() => {
+      axios.delete(`${BASE_URL}/delete-income/${id}`).then(() => {
         alert("Deleted! 🗑️");
         loadIncome(); loadFinance();
       }).catch(err => alert("Error ❌"));
@@ -164,27 +168,27 @@ export default function Admin() {
     if (!title.trim() || !content.trim()) { alert("Required ❌"); return; }
     const fd = new FormData();
     fd.append("title", title); fd.append("content", content);
-    axios.post("http://127.0.0.1:8000/add-blog", fd).then(() => { alert("Blog Added ✅"); setTitle(""); setContent(""); load(); });
+    axios.post(`${BASE_URL}/add-blog`, fd).then(() => { alert("Blog Added ✅"); setTitle(""); setContent(""); load(); });
   };
 
-  const delBlog = id => { axios.delete(`http://127.0.0.1:8000/delete-blog/${id}`).then(load); };
+  const delBlog = id => { axios.delete(`${BASE_URL}/delete-blog/${id}`).then(load); };
 
   const addService = () => {
     if (!stitle.trim() || !sdesc.trim()) { alert("Required ❌"); return; }
     const fd = new FormData();
     fd.append("title", stitle); fd.append("description", sdesc);
-    axios.post("http://127.0.0.1:8000/add-service", fd).then(() => { alert("Service Added ✅"); setSTitle(""); setSDesc(""); load(); });
+    axios.post(`${BASE_URL}/add-service`, fd).then(() => { alert("Service Added ✅"); setSTitle(""); setSDesc(""); load(); });
   };
 
-  const delService = id => { axios.delete(`http://127.0.0.1:8000/delete-service/${id}`).then(load); };
+  const delService = id => { axios.delete(`${BASE_URL}/delete-service/${id}`).then(load); };
 
   const completeAppointment = id => { 
-    axios.put(`http://127.0.0.1:8000/appointments/${id}/complete`).then(() => {
+    axios.put(`${BASE_URL}/appointments/${id}/complete`).then(() => {
         load(); loadFinance(); loadIncome();
     }); 
   };
   
-  const deleteAppointment = id => { axios.delete(`http://127.0.0.1:8000/appointments/${id}`).then(load); };
+  const deleteAppointment = id => { axios.delete(`${BASE_URL}/appointments/${id}`).then(load); };
 
   const offlineBook = async () => {
     if (!cname || !cphone || !cdate || !ctime) { alert("Please fill all fields ❌"); return; }
@@ -193,7 +197,7 @@ export default function Admin() {
     fd.append("address", ""); fd.append("problem", ""); fd.append("solution", "");
     fd.append("fee", 0); fd.append("gst", 18);
     try {
-      const res = await axios.post("http://127.0.0.1:8000/book", fd);
+      const res = await axios.post(`${BASE_URL}/book`, fd);
       if (res.data.status === "fail") { alert(res.data.message); return; }
       alert("Appointment Booked ✅");
       setCName(""); setCPhone(""); setCDate(""); setCTime(""); setSelectedDT(null);
@@ -201,6 +205,7 @@ export default function Admin() {
     } catch { alert("You Can't Select Prevoius Time ❌"); }
   };
 
+  // ... (Baaki saara UI code same rahega)
   const filterDate = (date) => {
     const todayDate = new Date(); todayDate.setHours(0,0,0,0);
     return date >= todayDate && date.getDay() !== 0;

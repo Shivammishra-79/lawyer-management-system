@@ -7,6 +7,11 @@ import {
   FaSave, FaEdit, FaPrint, FaTimes, FaRupeeSign, FaShieldAlt 
 } from "react-icons/fa";
 
+// --- AUTOMATIC URL LOGIC ---
+const BASE_URL = window.location.hostname === "localhost" 
+  ? "http://127.0.0.1:8000" 
+  : "https://lawyer-management-system-8fwo.onrender.com";
+
 export default function ClientDetails({ currentApp, onClose }) {
   const advocateInfo = {
     name: "Adv. Umesh Suryawanshi",
@@ -57,6 +62,7 @@ export default function ClientDetails({ currentApp, onClose }) {
 
   if (!currentApp) return null;
 
+  // --- SAVE LOGIC UPDATED WITH BASE_URL ---
   const saveData = async () => {
     if (!client.address.trim() || !consultant.problem.trim() || !consultant.solution.trim()) {
       alert("⚠️ Mandatory Fields Missing: Please fill Address, Case Facts, and Legal Solution.");
@@ -71,7 +77,9 @@ export default function ClientDetails({ currentApp, onClose }) {
     formData.append("gst", bill.gst);
 
     try {
-      await axios.put(`http://127.0.0.1:8000/appointments/${currentApp.id}/update`, formData);
+      // Updated URL here
+      await axios.put(`${BASE_URL}/appointments/${currentApp.id}/update`, formData);
+      
       localStorage.setItem("bill_" + client.phone, JSON.stringify({ client, bill }));
       localStorage.setItem("consultant_" + client.phone, JSON.stringify(consultant));
       setSaved(true);
@@ -89,7 +97,9 @@ export default function ClientDetails({ currentApp, onClose }) {
     doc.setDrawColor(20, 20, 20);
     doc.setLineWidth(0.8);
     doc.rect(5, 5, 200, 287); 
-    doc.addImage(logo, 'PNG', 15, 12, 28, 28);
+    
+    try { doc.addImage(logo, 'PNG', 15, 12, 28, 28); } catch(e) {}
+    
     doc.setTextColor(0, 0, 0);
     doc.setFont("times", "bold");
     doc.setFontSize(26);
@@ -189,6 +199,7 @@ export default function ClientDetails({ currentApp, onClose }) {
       <div className="bg-[#0c0c0c] w-full h-screen flex flex-col shadow-3xl overflow-hidden relative">
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-600/5 blur-[100px] pointer-events-none"></div>
 
+        {/* Header */}
         <div className="p-10 border-b border-white/5 flex justify-between items-center bg-zinc-900/10">
           <div className="flex items-center gap-8">
             <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center border-4 border-amber-600/20 shadow-2xl">
@@ -206,6 +217,7 @@ export default function ClientDetails({ currentApp, onClose }) {
           </button>
         </div>
 
+        {/* Content */}
         <div className="flex-1 overflow-y-auto p-12 space-y-12 custom-scrollbar">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             <div className="bg-zinc-900/30 p-8 rounded-[2.5rem] border border-white/5">
@@ -292,6 +304,7 @@ export default function ClientDetails({ currentApp, onClose }) {
           </div>
         </div>
 
+        {/* Footer Actions */}
         <div className="p-10 bg-black border-t border-white/10 flex justify-between items-center px-16">
           <div className="flex gap-8">
             <button onClick={() => generatePDF('record')} disabled={!saved} className="bg-white text-black px-14 py-6 rounded-2xl font-black uppercase text-[11px] tracking-widest hover:scale-105 transition-all disabled:opacity-20 flex items-center gap-4">

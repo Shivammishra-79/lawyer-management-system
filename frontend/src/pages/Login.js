@@ -14,6 +14,12 @@ export default function Login() {
 
   const nav = useNavigate();
 
+  // --- DYNAMIC API SELECTION ---
+  // Yeh automatic check karega: Localhost hai toh local IP, warna Render ka live link.
+  const API_BASE_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://127.0.0.1:8000" 
+    : "https://lawyer-management-system-8fwo.onrender.com";
+
   const login = async () => {
     setError("");
     if (!u.trim() || !p.trim()) {
@@ -27,14 +33,17 @@ export default function Login() {
     fd.append("password", p);
 
     try {
-      const r = await axios.post("http://127.0.0.1:8000/login", fd);
+      // API call with dynamic URL
+      const r = await axios.post(`${API_BASE_URL}/login`, fd);
+      
       if (r.data.success) {
         localStorage.setItem("admin", "yes");
         nav("/admin");
       } else {
         setError("❌ Invalid Access Token");
       }
-    } catch {
+    } catch (err) {
+      console.error("Login Error:", err);
       setError("❌ Encryption Error: Server Offline");
     } finally {
       setIsLoading(false);
@@ -46,7 +55,6 @@ export default function Login() {
       
       {/* --- DYNAMIC BACKGROUND DECOR --- */}
       <div className="absolute inset-0 z-0">
-        {/* Animated Glows */}
         <motion.div 
           animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
           transition={{ duration: 8, repeat: Infinity }}
@@ -57,7 +65,6 @@ export default function Login() {
           transition={{ duration: 10, repeat: Infinity }}
           className="absolute -bottom-[10%] -right-[10%] w-[250px] md:w-[500px] h-[250px] md:h-[500px] bg-zinc-800/20 rounded-full blur-[100px]"
         />
-        {/* Noise Texture Overaly */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
       </div>
 
@@ -66,7 +73,6 @@ export default function Login() {
         animate={{ opacity: 1, scale: 1 }}
         className="relative z-10 w-full max-w-[450px]"
       >
-        {/* ADMIN QUOTE HEADER */}
         <div className="text-center mb-6 md:mb-10">
           <motion.div
             initial={{ y: -20, opacity: 0 }}
@@ -84,15 +90,13 @@ export default function Login() {
 
         {/* LOGIN CARD */}
         <div className="bg-zinc-950/60 backdrop-blur-3xl border border-white/5 p-8 md:p-14 rounded-[2.5rem] shadow-[0_0_80px_rgba(0,0,0,0.8)] relative">
-          
-          {/* Top Thin Line Accent */}
           <div className="absolute top-0 left-1/4 right-1/4 h-[1px] bg-gradient-to-r from-transparent via-amber-600/50 to-transparent"></div>
 
           {/* BRANDING */}
           <div className="flex flex-col items-center mb-10 md:mb-12">
             <div className="relative group">
-              <div className="absolute -inset-1 bg-amber-600/20 rounded-full blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
-              <div className="relative bg-black border border-white/10 p-5 rounded-2xl mb-4 shadow-xl">
+              <div className="absolute -inset-1 bg-amber-600/20 rounded-full blur opacity-0 group-hover:opacity-10 transition duration-500"></div>
+              <div className="relative bg-black border border-white/10 p-5 rounded-2xl mb-4 shadow-xl text-white">
                 <FaBalanceScale className="text-amber-500 text-3xl md:text-4xl" />
               </div>
             </div>
@@ -103,7 +107,7 @@ export default function Login() {
 
           {/* INPUT SECTION */}
           <div className="space-y-6">
-            <div className="space-y-2">
+            <div className="space-y-2 text-white">
               <label className="text-[10px] uppercase tracking-[0.4em] text-zinc-500 font-black ml-1">Admin Identity</label>
               <div className="relative">
                 <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-700" />
@@ -120,7 +124,7 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 text-white">
               <label className="text-[10px] uppercase tracking-[0.4em] text-zinc-500 font-black ml-1">Master Key</label>
               <div className="relative">
                 <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-700" />
@@ -159,7 +163,7 @@ export default function Login() {
             whileTap={{ scale: 0.98 }}
             onClick={login}
             disabled={isLoading}
-            className={`w-full mt-10 relative overflow-hidden group bg-amber-600 text-black py-4 md:py-5 rounded-2xl font-black uppercase text-xs tracking-[0.4em] shadow-2xl shadow-amber-600/20 transition-all ${isLoading ? "cursor-wait" : ""}`}
+            className={`w-full mt-10 relative overflow-hidden group bg-amber-600 text-black py-4 md:py-5 rounded-2xl font-black uppercase text-xs tracking-[0.4em] shadow-2xl shadow-amber-600/20 transition-all ${isLoading ? "cursor-wait opacity-70" : ""}`}
           >
             <span className="relative z-10 flex items-center justify-center gap-3">
               {isLoading ? (

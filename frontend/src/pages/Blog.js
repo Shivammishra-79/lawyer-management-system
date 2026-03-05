@@ -4,22 +4,27 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import lawyerImg from "../assets/lawyer.jpg";
 
+// --- AUTOMATIC URL LOGIC ---
+const BASE_URL = window.location.hostname === "localhost" 
+  ? "http://127.0.0.1:8000" 
+  : "https://lawyer-management-system-8fwo.onrender.com";
+
 export default function Blog() {
   const [blogs, setBlogs] = useState([]);
   const [sliderIndex, setSliderIndex] = useState(0);
 
-  // Init AOS and fetch - (LOGIC SECURE)
+  // Init AOS and fetch - (UPDATED WITH BASE_URL)
   useEffect(() => {
     AOS.init({ duration: 1200, once: true });
-    axios.get("http://127.0.0.1:8000/blogs")
+    axios.get(`${BASE_URL}/blogs`)
        .then(r => setBlogs(r.data.reverse())) 
       .catch(err => {
-        console.error(err);
+        console.error("Blog Fetch Error:", err);
         setBlogs([]); 
       });
   }, []);
 
-  // Featured slider logic - (LOGIC SECURE)
+  // Featured slider logic
   const featured = blogs.slice(0, 3);
   useEffect(() => {
     if (featured.length > 0) {
@@ -33,7 +38,7 @@ export default function Blog() {
   return (
     <div className="relative min-h-screen bg-[#050505] text-white px-4 md:px-16 py-12 md:py-20 font-sans overflow-hidden">
       
-      {/* --- BG ELEMENTS (Synergy with Home/About) --- */}
+      {/* --- BG ELEMENTS --- */}
       <div className="absolute top-[-10%] right-[-5%] w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-yellow-600/5 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="absolute bottom-[20%] left-[-10%] w-[250px] md:w-[500px] h-[250px] md:h-[500px] bg-yellow-900/5 blur-[100px] rounded-full pointer-events-none"></div>
 
@@ -50,7 +55,7 @@ export default function Blog() {
 
         {blogs.length > 0 ? (
           <>
-            {/* --- HERO SLIDER (Premium Glassmorphism) --- */}
+            {/* --- HERO SLIDER --- */}
             {featured.length > 0 && (
               <section className="relative h-[400px] md:h-[550px] mb-20 overflow-hidden rounded-[40px] border border-white/10 shadow-2xl group" data-aos="zoom-in">
                 <img
@@ -77,7 +82,7 @@ export default function Blog() {
               </section>
             )}
 
-            {/* --- BLOG GRID (Responsive & Interactive) --- */}
+            {/* --- BLOG GRID --- */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
               {blogs.map((b, i) => (
                 <div
@@ -86,7 +91,6 @@ export default function Blog() {
                   data-aos="fade-up"
                   data-aos-delay={i * 100}
                 >
-                  {/* Subtle Image Backdrop on Hover */}
                   <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-[0.15] transition-opacity duration-1000 pointer-events-none">
                     <img
                       src={b.image || lawyerImg}
@@ -95,7 +99,6 @@ export default function Blog() {
                     />
                   </div>
 
-                  {/* Card Content */}
                   <div className="relative z-10 flex flex-col h-full">
                     <span className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-4 block">Case Study / {i + 1}</span>
                     <h2 className="text-2xl font-black mb-4 text-white group-hover:text-yellow-500 transition-colors uppercase leading-tight tracking-tight">
@@ -112,15 +115,12 @@ export default function Blog() {
                       Secure Consultation
                     </button>
                   </div>
-
-                  {/* Interactive Border Line */}
                   <div className="absolute top-0 left-0 w-0 h-1 bg-yellow-600 group-hover:w-full transition-all duration-700"></div>
                 </div>
               ))}
             </div>
           </>
         ) : (
-          /* Empty State */
           <div className="text-center py-32 bg-white/[0.02] border border-dashed border-white/10 rounded-[50px]" data-aos="fade-up">
             <p className="text-gray-500 text-lg md:text-2xl uppercase tracking-[0.5em] font-black opacity-30 italic">
               Archives Under Seal...
@@ -130,7 +130,6 @@ export default function Blog() {
         )}
       </div>
 
-      {/* FOOTER SYNERGY */}
       <div className="mt-32 text-center opacity-30">
           <p className="text-[9px] tracking-[1em] uppercase font-black">Official Legal Journal • Adv. Umesh Suryawanshi</p>
       </div>
