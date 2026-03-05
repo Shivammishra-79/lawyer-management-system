@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Form, HTTPException
-import mysql.connector
+import pymysql
+import os
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, time as dt_time
 
@@ -13,20 +14,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# DB connection
+# --- SMART DB CONNECTION (Local + TiDB Cloud) ---
 def get_db():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="root",
-        database="lawdb"
-    )
+    is_render = os.environ.get('RENDER') # Check if running on Render
+    
+    if is_render:
+        # TiDB Cloud Connection
+        return pymysql.connect(
+            host="gateway01.ap-southeast-1.prod.aws.tidbcloud.com",
+            user="bbcnrmpTQxBSUUz.root",
+            password="H1kbOJeUjXLbr7Ef",
+            database="test",
+            port=4000,
+            ssl_verify_cert=True,
+            cursorclass=pymysql.cursors.DictCursor
+        )
+    else:
+        # Localhost Connection
+        return pymysql.connect(
+            host="localhost",
+            user="root",
+            password="root", 
+            database="lawdb",
+            cursorclass=pymysql.cursors.DictCursor
+        )
 
 # ---------------- LOGIN ----------------
 @app.post("/login")
 def login(username: str = Form(...), password: str = Form(...)):
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     cursor.execute(
         "SELECT * FROM admin WHERE username=%s AND password=%s",
         (username, password)
@@ -51,7 +68,7 @@ def add_blog(title: str = Form(...), content: str = Form(...)):
 @app.get("/blogs")
 def blogs():
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     cursor.execute("SELECT * FROM blogs ORDER BY id DESC")
     data = cursor.fetchall()
     db.close()
@@ -82,7 +99,7 @@ def add_service(title: str = Form(...), description: str = Form(...)):
 @app.get("/services")
 def services():
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     cursor.execute("SELECT * FROM services")
     data = cursor.fetchall()
     db.close()
@@ -120,13 +137,14 @@ def book(
         raise HTTPException(400, "Booking allowed 10AM–6PM only")
 
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
 
     cursor.execute("SELECT date,time FROM appointments WHERE date=%s", (date,))
     existing = cursor.fetchall()
 
     for e in existing:
         try:
+            # pymysql returns timedelta for time objects
             existing_time = str(e["time"])[:5]
             existing_dt = datetime.strptime(f"{e['date']} {existing_time}", "%Y-%m-%d %H:%M")
             diff = abs((new_appt - existing_dt).total_seconds()) / 60
@@ -148,13 +166,14 @@ def book(
 @app.get("/appointments")
 def appointments():
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     cursor.execute("SELECT * FROM appointments ORDER BY id DESC")
     data = cursor.fetchall()
     db.close()
 
     for d in data:
         if d["time"]:
+            # Formatting time for display
             t = str(d["time"])[:5]
             hh, mm = map(int, t.split(":"))
             ampm = "PM" if hh >= 12 else "AM"
@@ -162,10 +181,9 @@ def appointments():
             d["time"] = f"{hh}:{mm:02d} {ampm}"
 
         if d.get("fee") is not None and d.get("gst") is not None:
-            d["total"] = d["fee"] + (d["fee"] * d["gst"] / 100)
+            d["total"] = float(d["fee"]) + (float(d["fee"]) * float(d["gst"]) / 100)
         else:
             d["total"] = 0
-
     return data
 
 @app.put("/appointments/{id}/complete")
@@ -224,7 +242,7 @@ def add_expense(reason: str = Form(...), amount: float = Form(...), date: str = 
 @app.get("/expenses")
 def get_expenses():
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     cursor.execute("SELECT * FROM expenses ORDER BY id DESC")
     data = cursor.fetchall()
     db.close()
@@ -244,23 +262,19 @@ def get_finance_summary():
     db = get_db()
     cursor = db.cursor()
     
-    # 1. Appointments se aayi income
-    cursor.execute("SELECT SUM(fee + (fee * gst / 100)) FROM appointments WHERE status='completed' AND fee IS NOT NULL")
+    cursor.execute("SELECT SUM(fee + (fee * gst / 100)) as appt_total FROM appointments WHERE status='completed' AND fee IS NOT NULL")
     res_appt = cursor.fetchone()
-    appt_income = float(res_appt[0]) if res_appt and res_appt[0] else 0.0
+    appt_income = float(res_appt['appt_total']) if res_appt and res_appt['appt_total'] else 0.0
     
-    # 2. Client Income table se aayi income (NEW)
-    cursor.execute("SELECT SUM(amount) FROM client_income")
+    cursor.execute("SELECT SUM(amount) as client_total FROM client_income")
     res_cl = cursor.fetchone()
-    client_table_income = float(res_cl[0]) if res_cl and res_cl[0] else 0.0
+    client_table_income = float(res_cl['client_total']) if res_cl and res_cl['client_total'] else 0.0
     
-    # Total Income = Appointments + Direct Payments
     total_income = appt_income + client_table_income
     
-    # 3. Total Expenses
-    cursor.execute("SELECT SUM(amount) FROM expenses")
+    cursor.execute("SELECT SUM(amount) as exp_total FROM expenses")
     res_expense = cursor.fetchone()
-    total_expense = float(res_expense[0]) if res_expense and res_expense[0] else 0.0
+    total_expense = float(res_expense['exp_total']) if res_expense and res_expense['exp_total'] else 0.0
     
     db.close()
     return {
@@ -282,7 +296,7 @@ def add_credit(name: str = Form(...), amount: float = Form(...), date: str = For
 @app.get("/get_credits")
 def get_credits():
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     cursor.execute("SELECT id, name, fee as amount, date, problem as note FROM appointments WHERE fee > 0 AND status='completed' ORDER BY date DESC")
     credits = cursor.fetchall()
     db.close()
@@ -305,7 +319,7 @@ def add_income(name: str = Form(...), mobile: str = Form(...), amount: float = F
 @app.get("/get-income")
 def get_income():
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     cursor.execute("SELECT * FROM client_income ORDER BY payment_date DESC")
     data = cursor.fetchall()
     db.close()
