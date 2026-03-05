@@ -15,7 +15,6 @@ export default function Login() {
   const nav = useNavigate();
 
   // --- DYNAMIC API SELECTION ---
-  // Yeh automatic check karega: Localhost hai toh local IP, warna Render ka live link.
   const API_BASE_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
     ? "http://127.0.0.1:8000" 
     : "https://lawyer-management-system-8fwo.onrender.com";
@@ -36,15 +35,22 @@ export default function Login() {
       // API call with dynamic URL
       const r = await axios.post(`${API_BASE_URL}/login`, fd);
       
-      if (r.data.success) {
+      // DEBUG: Isse aapko Console mein dikhega ki Backend kya bhej raha hai
+      console.log("Backend Response:", r.data);
+
+      // Agar backend success: true bhej raha hai ya direct status 200 hai
+      if (r.data.success || r.status === 200) {
         localStorage.setItem("admin", "yes");
+        // Kuch cases mein token r.data.access_token mein hota hai
+        if(r.data.access_token) localStorage.setItem("token", r.data.access_token);
+        
         nav("/admin");
       } else {
         setError("❌ Invalid Access Token");
       }
     } catch (err) {
-      console.error("Login Error:", err);
-      setError("❌ Encryption Error: Server Offline");
+      console.error("Login Error Details:", err.response ? err.response.data : err.message);
+      setError(err.response?.status === 401 ? "❌ Unauthorized: Wrong Credentials" : "❌ Encryption Error: Server Offline");
     } finally {
       setIsLoading(false);
     }
