@@ -32,24 +32,25 @@ export default function Login() {
     fd.append("password", p);
 
     try {
-      // API call with dynamic URL
       const r = await axios.post(`${API_BASE_URL}/login`, fd);
       
-      // DEBUG: Isse aapko Console mein dikhega ki Backend kya bhej raha hai
       console.log("Backend Response:", r.data);
 
-      // Agar backend success: true bhej raha hai ya direct status 200 hai
-      if (r.data.success || r.status === 200) {
+      // --- STRICT CHECK START ---
+      // Hum sirf tabhi aage badhenge jab success explicit 'true' ho
+      if (r.data.success === true) {
         localStorage.setItem("admin", "yes");
-        // Kuch cases mein token r.data.access_token mein hota hai
         if(r.data.access_token) localStorage.setItem("token", r.data.access_token);
-        
         nav("/admin");
       } else {
-        setError("❌ Invalid Access Token");
+        // Agar status 200 hai par success false, toh iska matlab password galat hai
+        setError("❌ Invalid Access Token: Wrong Identity");
       }
+      // --- STRICT CHECK END ---
+
     } catch (err) {
       console.error("Login Error Details:", err.response ? err.response.data : err.message);
+      // Agar backend 401 (Unauthorized) bhej raha hai
       setError(err.response?.status === 401 ? "❌ Unauthorized: Wrong Credentials" : "❌ Encryption Error: Server Offline");
     } finally {
       setIsLoading(false);

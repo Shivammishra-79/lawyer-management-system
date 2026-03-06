@@ -40,18 +40,24 @@ def get_db():
         )
 
 # ---------------- LOGIN ----------------
+# ---------------- LOGIN (Strict Validation) ----------------
 @app.post("/login")
 def login(username: str = Form(...), password: str = Form(...)):
     db = get_db()
     cursor = db.cursor()
+    
+    # Simple aur accurate query
     cursor.execute(
-        "SELECT * FROM admin WHERE username=%s AND password=%s",
+        "SELECT id FROM admin WHERE username=%s AND password=%s", 
         (username, password)
     )
     result = cursor.fetchone()
     db.close()
-    return {"success": result is not None}
 
+    if result:
+        return {"success": True}
+    else:
+        return {"success": False}
 # ---------------- BLOG ----------------
 @app.post("/add-blog")
 def add_blog(title: str = Form(...), content: str = Form(...)):
