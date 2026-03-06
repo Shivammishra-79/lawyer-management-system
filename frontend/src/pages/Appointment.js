@@ -13,6 +13,15 @@ const BASE_URL = window.location.hostname === "localhost"
   ? "http://127.0.0.1:8000" 
   : "https://lawyer-management-system-8fwo.onrender.com";
 
+// --- SKELETON COMPONENT FOR PREMIUM FEEL ---
+const SlotSkeleton = () => (
+  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => (
+      <div key={i} className="h-14 bg-white/5 animate-pulse rounded-2xl border border-white/5"></div>
+    ))}
+  </div>
+);
+
 export default function Appointment() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -20,13 +29,24 @@ export default function Appointment() {
   const [time, setTime] = useState("");
   const [selectedDate, setSelectedDate] = useState(null);
   const [bookedTimes, setBookedTimes] = useState([]);
+  const [isSlotsLoading, setIsSlotsLoading] = useState(false);
 
   useEffect(() => {
     AOS.init({ duration: 1000, once: true });
   }, []);
 
-  // --- FETCH LOGIC UPDATED WITH BASE_URL ---
+  // --- FETCH LOGIC WITH SMART CACHING ---
   const fetchBooked = async (d) => {
+    const cacheKey = `booked_${d}`;
+    const cachedData = localStorage.getItem(cacheKey);
+    
+    // Pehle purana data dikhao (Instant)
+    if (cachedData) {
+      setBookedTimes(JSON.parse(cachedData));
+    } else {
+      setIsSlotsLoading(true);
+    }
+
     try {
       const res = await axios.get(`${BASE_URL}/appointments`);
       const sameDay = res.data.filter(a => a.date === d);
@@ -39,11 +59,18 @@ export default function Appointment() {
         if (ampm === "AM" && h === 12) h = 0;
         return `${h.toString().padStart(2, "0")}:${m}`;
       });
+      
+      // Update data and refresh cache
       setBookedTimes(times);
-    } catch (err) { console.error("Error fetching slots", err); }
+      localStorage.setItem(cacheKey, JSON.stringify(times));
+    } catch (err) { 
+      console.error("Error fetching slots", err); 
+    } finally {
+      setIsSlotsLoading(false);
+    }
   };
 
-  // --- KHATARNAK PDF SLIP DESIGN (Unchanged) ---
+  // --- KHATARNAK PDF SLIP DESIGN ---
   const downloadSlip = () => {
     const doc = new jsPDF();
     const goldColor = [202, 138, 4]; // #ca8a04
@@ -84,8 +111,8 @@ export default function Appointment() {
     doc.setFontSize(12); doc.setTextColor(202, 138, 4);
     doc.text("APPOINTMENT SUMMARY", 25, 100);
     doc.setTextColor(0, 0, 0); doc.setFont("helvetica", "normal");
-    doc.text(`Client Name    :   ${name.toUpperCase()}`, 30, 112);
-    doc.text(`Contact No     :   +91 ${phone}`, 30, 120);
+    doc.text(`Client Name     :   ${name.toUpperCase()}`, 30, 112);
+    doc.text(`Contact No      :   +91 ${phone}`, 30, 120);
     doc.text(`Scheduled Date :   ${date}`, 30, 128);
     doc.text(`Scheduled Time :   ${to12Hour(time)}`, 30, 136);
 
@@ -104,7 +131,7 @@ export default function Appointment() {
     doc.save(`Appointment_${name.replace(/\s+/g, '_')}.pdf`);
   };
 
-  // --- BOOK LOGIC UPDATED WITH BASE_URL ---
+  // --- BOOK LOGIC ---
   const book = async () => {
     if (!name || !phone || !date || !time) { alert("Fill all fields"); return; }
     if (phone.length !== 10 || !/^\d+$/.test(phone)) { alert("Phone must be 10 digits"); return; }
@@ -114,12 +141,16 @@ export default function Appointment() {
       const res = await axios.post(`${BASE_URL}/book`, fd);
       if (res.data.status === "fail") { alert(res.data.message || "Slot already booked"); return; }
       alert("Booked Successfully ✅");
+      
+      // Clear cache for updated day
+      localStorage.removeItem(`booked_${date}`);
+      
       downloadSlip();
       setName(""); setPhone(""); setDate(""); setTime(""); setSelectedDate(null);
     } catch (err) { alert(err.response?.data?.detail || "Booking Failed"); }
   };
 
-  // ... (Baaki saara UI aur helpers logic same rahega)
+  // --- HELPERS (Poora 280+ Lines karne ke liye) ---
   const isPastTime = (slotTime) => {
     if (!date) return false;
     const now = new Date();
@@ -227,27 +258,35 @@ export default function Appointment() {
                 {date && <span className="bg-yellow-600/10 text-yellow-500 px-4 py-1 rounded-full text-[10px] font-black">{date}</span>}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 overflow-y-auto max-h-[350px] pr-2 custom-scrollbar">
-                {timeSlots.map(t => {
-                  const isBooked = bookedTimes.includes(t.value);
-                  const past = isPastTime(t.value);
-                  const isSelected = time === t.value;
+              <div className="overflow-y-auto max-h-[350px] pr-2 custom-scrollbar">
+                {!date ? (
+                  <p className="text-zinc-600 text-center py-10 font-bold italic">Select a date to view availability</p>
+                ) : isSlotsLoading ? (
+                  <SlotSkeleton />
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {timeSlots.map(t => {
+                      const isBooked = bookedTimes.includes(t.value);
+                      const past = isPastTime(t.value);
+                      const isSelected = time === t.value;
 
-                  return (
-                    <button
-                      key={t.value}
-                      disabled={isBooked || past}
-                      onClick={() => setTime(t.value)}
-                      className={`p-4 rounded-2xl text-[10px] font-black transition-all border
-                        ${isBooked ? "bg-red-900/20 border-red-900/30 text-red-800 cursor-not-allowed opacity-40" :
-                          past ? "bg-zinc-800 border-zinc-700 text-zinc-600 opacity-30" :
-                          isSelected ? "bg-yellow-600 border-yellow-400 text-black scale-105" :
-                          "bg-white/5 border-white/10 text-gray-400 hover:border-yellow-600 hover:text-white"}`}
-                    >
-                      {t.label}
-                    </button>
-                  );
-                })}
+                      return (
+                        <button
+                          key={t.value}
+                          disabled={isBooked || past}
+                          onClick={() => setTime(t.value)}
+                          className={`p-4 rounded-2xl text-[10px] font-black transition-all border
+                            ${isBooked ? "bg-red-900/20 border-red-900/30 text-red-800 cursor-not-allowed opacity-40" :
+                              past ? "bg-zinc-800 border-zinc-700 text-zinc-600 opacity-30" :
+                              isSelected ? "bg-yellow-600 border-yellow-400 text-black scale-105" :
+                              "bg-white/5 border-white/10 text-gray-400 hover:border-yellow-600 hover:text-white"}`}
+                        >
+                          {t.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="mt-8 space-y-4">
