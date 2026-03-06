@@ -4,27 +4,52 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import lawyerImg from "../assets/lawyer.jpg";
 
-// --- AUTOMATIC URL LOGIC ---
 const BASE_URL = window.location.hostname === "localhost" 
   ? "http://127.0.0.1:8000" 
   : "https://lawyer-management-system-8fwo.onrender.com";
 
+// --- SKELETON COMPONENT ---
+const BlogSkeleton = () => (
+  <div className="bg-zinc-900/40 p-8 md:p-10 rounded-[40px] border border-white/5 animate-pulse">
+    <div className="h-3 w-20 bg-zinc-800 rounded mb-4"></div>
+    <div className="h-8 w-full bg-zinc-800 rounded mb-4"></div>
+    <div className="h-4 w-full bg-zinc-800 rounded mb-2"></div>
+    <div className="h-4 w-2/3 bg-zinc-800 rounded mb-8"></div>
+    <div className="h-12 w-full bg-zinc-800 rounded-2xl"></div>
+  </div>
+);
+
 export default function Blog() {
   const [blogs, setBlogs] = useState([]);
   const [sliderIndex, setSliderIndex] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Init AOS and fetch - (UPDATED WITH BASE_URL)
   useEffect(() => {
     AOS.init({ duration: 1200, once: true });
+
+    // 1. CACHE CHECK: Pehle local storage se data uthao
+    const cachedBlogs = localStorage.getItem("cached_blogs");
+    if (cachedBlogs) {
+      setBlogs(JSON.parse(cachedBlogs));
+      setIsLoading(false); // Cache mil gaya toh loader hata do
+    }
+
+    // 2. LIVE FETCH: Background mein Render se naya data lao
     axios.get(`${BASE_URL}/blogs`)
-       .then(r => setBlogs(r.data.reverse())) 
+      .then(r => {
+        const freshData = r.data.reverse();
+        setBlogs(freshData);
+        setIsLoading(false);
+        // Naye data ko cache mein update karo
+        localStorage.setItem("cached_blogs", JSON.stringify(freshData));
+      })
       .catch(err => {
         console.error("Blog Fetch Error:", err);
-        setBlogs([]); 
+        if (!cachedBlogs) setBlogs([]); 
+        setIsLoading(false);
       });
   }, []);
 
-  // Featured slider logic
   const featured = blogs.slice(0, 3);
   useEffect(() => {
     if (featured.length > 0) {
@@ -38,13 +63,13 @@ export default function Blog() {
   return (
     <div className="relative min-h-screen bg-[#050505] text-white px-4 md:px-16 py-12 md:py-20 font-sans overflow-hidden">
       
-      {/* --- BG ELEMENTS --- */}
+      {/* BG ELEMENTS */}
       <div className="absolute top-[-10%] right-[-5%] w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-yellow-600/5 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="absolute bottom-[20%] left-[-10%] w-[250px] md:w-[500px] h-[250px] md:h-[500px] bg-yellow-900/5 blur-[100px] rounded-full pointer-events-none"></div>
 
       <div className="max-w-7xl mx-auto relative z-10">
         
-        {/* --- HEADER --- */}
+        {/* HEADER */}
         <div className="text-center mb-16" data-aos="fade-down">
           <h2 className="text-yellow-600 font-black uppercase text-[10px] tracking-[0.6em] mb-4">Legal Insights</h2>
           <h1 className="text-4xl md:text-7xl font-black text-white tracking-tighter uppercase">
@@ -53,9 +78,15 @@ export default function Blog() {
           <div className="h-1 w-20 bg-yellow-600 mx-auto mt-6 shadow-[0_0_15px_rgba(202,138,4,0.4)]"></div>
         </div>
 
-        {blogs.length > 0 ? (
+        {/* --- MAIN CONTENT LOGIC --- */}
+        {isLoading && blogs.length === 0 ? (
+          // Agar loading hai aur cache mein bhi kuch nahi hai
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+            {[1, 2, 3, 4, 5, 6].map(n => <BlogSkeleton key={n} />)}
+          </div>
+        ) : blogs.length > 0 ? (
           <>
-            {/* --- HERO SLIDER --- */}
+            {/* HERO SLIDER */}
             {featured.length > 0 && (
               <section className="relative h-[400px] md:h-[550px] mb-20 overflow-hidden rounded-[40px] border border-white/10 shadow-2xl group" data-aos="zoom-in">
                 <img
@@ -82,7 +113,7 @@ export default function Blog() {
               </section>
             )}
 
-            {/* --- BLOG GRID --- */}
+            {/* BLOG GRID */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
               {blogs.map((b, i) => (
                 <div
@@ -92,26 +123,15 @@ export default function Blog() {
                   data-aos-delay={i * 100}
                 >
                   <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-[0.15] transition-opacity duration-1000 pointer-events-none">
-                    <img
-                      src={b.image || lawyerImg}
-                      alt="Lawyer Backdrop"
-                      className="w-full h-full object-cover grayscale"
-                    />
+                    <img src={b.image || lawyerImg} alt="Backdrop" className="w-full h-full object-cover grayscale" />
                   </div>
-
                   <div className="relative z-10 flex flex-col h-full">
                     <span className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-4 block">Case Study / {i + 1}</span>
-                    <h2 className="text-2xl font-black mb-4 text-white group-hover:text-yellow-500 transition-colors uppercase leading-tight tracking-tight">
-                        {b.title}
-                    </h2>
+                    <h2 className="text-2xl font-black mb-4 text-white group-hover:text-yellow-500 transition-colors uppercase leading-tight tracking-tight">{b.title}</h2>
                     <p className="text-gray-400 text-sm leading-relaxed mb-8 flex-1 group-hover:text-gray-200 transition-colors font-medium">
                       {b.content.length > 150 ? b.content.slice(0, 150) + "..." : b.content}
                     </p>
-                    
-                    <button
-                      onClick={() => window.location.href = "/appointment"}
-                      className="w-full py-4 border border-yellow-600/30 text-yellow-500 font-black uppercase text-[10px] tracking-[0.2em] rounded-2xl hover:bg-yellow-600 hover:text-black transition-all duration-500 group-hover:shadow-[0_10px_30px_rgba(202,138,4,0.2)]"
-                    >
+                    <button onClick={() => window.location.href = "/appointment"} className="w-full py-4 border border-yellow-600/30 text-yellow-500 font-black uppercase text-[10px] tracking-[0.2em] rounded-2xl hover:bg-yellow-600 hover:text-black transition-all duration-500">
                       Secure Consultation
                     </button>
                   </div>
@@ -121,11 +141,8 @@ export default function Blog() {
             </div>
           </>
         ) : (
-          <div className="text-center py-32 bg-white/[0.02] border border-dashed border-white/10 rounded-[50px]" data-aos="fade-up">
-            <p className="text-gray-500 text-lg md:text-2xl uppercase tracking-[0.5em] font-black opacity-30 italic">
-              Archives Under Seal...
-            </p>
-            <p className="text-yellow-600/50 text-[10px] mt-4 uppercase tracking-widest">Legal journals will be updated shortly.</p>
+          <div className="text-center py-32 bg-white/[0.02] border border-dashed border-white/10 rounded-[50px]">
+            <p className="text-gray-500 text-lg md:text-2xl uppercase tracking-[0.5em] font-black opacity-30 italic">Archives Empty</p>
           </div>
         )}
       </div>
